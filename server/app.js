@@ -17,6 +17,7 @@ dotENV.config();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
+    credentials: true,
     origin: 'http://localhost:3000', // Frontend URL
     methods: ['GET', 'POST'],
   },
@@ -47,7 +48,12 @@ mongoose
   });
 
 app.use(cookieParser());
-app.use(cors());
+app.use(
+  cors({
+    credentials: true,
+    origin: process.env.Origin_HOST,
+  })
+);
 app.use(helmet());
 app.use(mongoSanitize());
 app.use(xss());
