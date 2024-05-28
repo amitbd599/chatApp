@@ -1,0 +1,57 @@
+// 
+// root.scss
+//
+
+@mixin color-mode($mode: light, $root: false) {
+    @if $color-mode-type =="media-query" {
+        @if $root ==true {
+            @media (prefers-color-scheme: $mode) {
+                :root {
+                    @content;
+                }
+            }
+        }
+
+        @else {
+            @media (prefers-color-scheme: $mode) {
+                @content;
+            }
+        }
+    }
+
+    @else {
+        [data-bs-theme="#{$mode}"] {
+            @content;
+        }
+    }
+}
+
+//theme-light
+:root,
+[data-bs-theme="light"] {
+    --#{$prefix}header-bg: #ffffff;
+    --#{$prefix}header-item-sub-color: #{$text-muted};
+    --#{$prefix}header-height: 70px;
+
+    //sidebar vertical light
+    --#{$prefix}sidebar-bg: #ffffff;
+    --#{$prefix}sidebar-menu-item-color: #878a92;
+    --#{$prefix}sidebar-menu-item-active-bg: #f7f7ff;
+    --#{$prefix}sidebar-menu-item-active-color: #4eac6d;
+}
+
+//theme dark
+@if $enable-dark-mode {
+    @include color-mode(dark, true) {
+        --#{$prefix}light: #{$light-dark};
+        --#{$prefix}light-rgb: #{to-rgb($light-dark)};
+        --#{$prefix}dark: #{$light-dark};
+        --#{$prefix}dark-rgb: #{to-rgb($light-dark)};
+
+
+        --#{$prefix}sidebar-bg: #{$gray-900};
+        --#{$prefix}sidebar-menu-item-color: #878a92;
+        --#{$prefix}sidebar-menu-item-active-bg: #f7f7ff;
+        --#{$prefix}sidebar-menu-item-active-color: #4eac6d;
+    }
+}
