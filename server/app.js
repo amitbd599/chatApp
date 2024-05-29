@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = require('./src/routes/api');
 const app = new express();
@@ -53,7 +52,7 @@ app.use(
   cors({
     credentials: true,
     origin: process.env.Origin_HOST,
-  })
+  }),
 );
 app.use(helmet());
 app.use(mongoSanitize());
@@ -63,7 +62,7 @@ app.use(hpp());
 app.use(express.json({ limit: '500mb' }));
 app.use(express.urlencoded({ limit: '50mb' }));
 
-const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 3000 });
+const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30000 });
 app.use(limiter);
 
 app.use('/api/v1', router);

@@ -14,8 +14,8 @@ import { FaXmark } from 'react-icons/fa6';
 import axios from 'axios';
 import SkeletonLoader from '../helper/SkeletonLoader';
 
-const ENDPOINT = 'http://localhost:5000';
-const BaseURL = 'http://localhost:5000/api/v1';
+const ENDPOINT = 'https://chat-app-rho-rosy.vercel.app';
+const BaseURL = 'https://chat-app-rho-rosy.vercel.app/api/v1';
 
 const Home = () => {
   let [activeUserChatID, setActiveUserChatID] = useState(null);
