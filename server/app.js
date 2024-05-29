@@ -17,14 +17,14 @@ dotENV.config();
 app.use(
   cors({
     credentials: true,
-    origin: process.env.Origin_HOST,
+    origin: "https://chat-app-mern-amit.netlify.app",
   }),
 );
 
 const server = require('http').createServer(app);
 const io = require('socket.io')(server, {
   cors: {
-    origin: 'http://localhost:3000',
+    origin: 'https://chat-app-mern-amit.netlify.app',
     methods: ['GET', 'POST'],
     credentials: true,
   },
