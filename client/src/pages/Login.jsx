@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ErrorToast, IsEmpty } from '../helper/helper';
 import { login__Request__API } from '../api/Api';
 
@@ -62,12 +62,9 @@ const Login = () => {
                         </div>
                         <div className="mb-3">
                           <div className="float-end">
-                            <a
-                              href="auth-recoverpw.html"
-                              className="text-muted"
-                            >
+                            <Link to="/forgot-password" className="text-muted">
                               Forgot password?
-                            </a>
+                            </Link>
                           </div>
                           <label htmlFor="userpassword" className="form-label">
                             Password
@@ -89,19 +86,7 @@ const Login = () => {
                             </button>
                           </div>
                         </div>
-                        <div className="form-check form-check-info fs-16">
-                          <input
-                            className="form-check-input"
-                            type="checkbox"
-                            id="remember-check"
-                          />
-                          <label
-                            className="form-check-label fs-14"
-                            htmlFor="remember-check"
-                          >
-                            Remember me
-                          </label>
-                        </div>
+
                         <div className="text-center mt-4">
                           <button
                             className="btn btn-primary w-100"
@@ -115,13 +100,13 @@ const Login = () => {
                       <div className="mt-5 text-center text-muted">
                         <p>
                           Don't have an account ?{' '}
-                          <a
-                            href="auth-register.html"
+                          <Link
+                            to="/register"
                             className="fw-medium text-decoration-underline"
                           >
                             {' '}
                             Register
-                          </a>
+                          </Link>
                         </p>
                       </div>
                     </div>

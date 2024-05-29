@@ -17,6 +17,8 @@ const DataSchema = mongoose.Schema(
     lastName: { type: String, required: true },
     mobileNo: { type: String },
     img: { type: String },
+    bio: { type: String },
+    location: { type: String },
   },
   {
     timestamps: true,

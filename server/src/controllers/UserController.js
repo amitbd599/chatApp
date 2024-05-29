@@ -8,6 +8,7 @@ const {
   RecoverVerifyOTPUserService,
   ResetPasswordUserService,
   UserAllReadService,
+  UserReadByIDService,
 } = require('../service.js/UserService');
 
 //! User Control
@@ -25,6 +26,10 @@ exports.LogoutUser = async (req, res) => {
 };
 exports.UserRead = async (req, res) => {
   let result = await UserReadService(req);
+  return res.status(200).json(result);
+};
+exports.UserReadByID = async (req, res) => {
+  let result = await UserReadByIDService(req);
   return res.status(200).json(result);
 };
 exports.UserAllRead = async (req, res) => {

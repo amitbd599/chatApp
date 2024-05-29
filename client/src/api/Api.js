@@ -54,6 +54,26 @@ export const login__Request__API = async (postBody) => {
   }
 };
 
+export const logout__Request__API = async () => {
+  let URL = BaseURL + "/logout";
+
+  try {
+    const result = await axios.get(URL, { withCredentials: true, credentials: "include", });
+    if (result.status === 200) {
+      if (result.data["status"] === true) {
+        return true;
+      } else {
+        return false;
+      }
+    } else {
+      return false;
+    }
+  } catch (err) {
+    ErrorToast("Something went wrong!");
+    return false;
+  }
+};
+
 
 export const Read_all_user_api = async ()=>{
   let URL = BaseURL + `/read-all-user`;
@@ -75,3 +95,130 @@ export const Read_all_user_api = async ()=>{
     return false;
   }
 }
+
+export const profile_update__Request__API = async (postBody) => {
+  let URL = BaseURL + "/user-update";
+
+  try {
+    const result = await axios.post(URL, postBody, { withCredentials: true });
+    if (result.status === 200) {
+      if (result.data["status"] === true) {
+        return true;
+      } else {
+        return false;
+      }
+    } else {
+      return false;
+    }
+  } catch (err) {
+    ErrorToast("profile update fail!");
+    return false;
+  }
+};
+
+export const Read_user_by_id_api = async (id)=>{
+  let URL = BaseURL + `/read-user-by/`+ id;
+  try {
+    const result = await axios.get(URL, { withCredentials: true });
+    if (result.status === 200) {
+      if (result.data["status"] === true) {
+        return result.data;
+      } else {
+        return false;
+      }
+    } else {
+      return false;
+    }
+  } catch (err) {
+    return false;
+  }
+}
+export const Read_user_api = async ()=>{
+  let URL = BaseURL + `/read-user`;
+  try {
+    const result = await axios.get(URL, { withCredentials: true });
+    if (result.status === 200) {
+      if (result.data["status"] === true) {
+        return result.data;
+      } else {
+        console.log("Invoice get fail!-1");
+        return false;
+      }
+    } else {
+      console.log("Invoice get fail!-2");
+      return false;
+    }
+  } catch (err) {
+    console.log("Invoice get fail!");
+    return false;
+  }
+}
+
+export const forgot_password__Request__API = async (email) => {
+  let URL = BaseURL + `/forgot-password/${email}`;
+
+  try {
+    const result = await axios.post(URL, { withCredentials: true });
+    if (result.status === 200) {
+      if (result.data["status"] === true) {
+        SuccessToast("OTP send success!");
+        return true;
+      } else {
+        ErrorToast("No user found!");
+        return false;
+      }
+    } else {
+      ErrorToast("OTP send fail!");
+      return false;
+    }
+  } catch (err) {
+    ErrorToast("OTP send fail!");
+    return false;
+  }
+};
+
+export const otp__Request__API = async (email, otp) => {
+  let URL = BaseURL + `/otp-verify/${email}/${otp}`;
+
+  try {
+    const result = await axios.post(URL, { withCredentials: true });
+    if (result.status === 200) {
+      if (result.data["status"] === true) {
+        SuccessToast("OTP verify success!");
+        return true;
+      } else {
+        ErrorToast("OTP verify fail!");
+        return false;
+      }
+    } else {
+      ErrorToast("OTP verify fail!");
+      return false;
+    }
+  } catch (err) {
+    ErrorToast("OTP verify fail!");
+    return false;
+  }
+};
+
+export const reset_password__Request__API = async (email, otp, password) => {
+  let URL = BaseURL + `/reset-password/${email}/${otp}`;
+
+  try {
+    const result = await axios.post(URL, { password }, { withCredentials: true });
+    if (result.status === 200) {
+      if (result.data["status"] === true) {
+        SuccessToast("Password change success!");
+        return true;
+      } else {
+        ErrorToast("Password change fail!");
+        return false;
+      }
+    } else {
+      ErrorToast("Password change fail!");
+      return false;
+    }
+  } catch (err) {
+    ErrorToast("Password change fail!");
+    return false;
+  }
+};

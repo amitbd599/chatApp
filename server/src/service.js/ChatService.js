@@ -33,8 +33,8 @@ const ReadSenderChatService = async (req) => {
 };
 const ReadReceiverChatService = async (req) => {
   try {
-    receiverID  = new ObjectId(req.headers.user_id);
-    senderID = new ObjectId(req.body.receiverID);
+    receiverID = new ObjectId(req.headers.user_id);
+    senderID = new ObjectId(req.body.senderID);
     let MatchStage = {
       $match: {
         senderID,
@@ -42,6 +42,7 @@ const ReadReceiverChatService = async (req) => {
       },
     };
 
+    console.log(MatchStage);
     let data = await ChatModel.aggregate([MatchStage]);
     return { status: true, data: data };
   } catch (error) {
@@ -49,4 +50,8 @@ const ReadReceiverChatService = async (req) => {
   }
 };
 
-module.exports = { CreateChatService, ReadSenderChatService, ReadReceiverChatService };
+module.exports = {
+  CreateChatService,
+  ReadSenderChatService,
+  ReadReceiverChatService,
+};

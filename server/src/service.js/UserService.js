@@ -1,9 +1,10 @@
 const md5 = require('md5');
+const mongoose = require('mongoose');
 const UserModel = require('../models/UserModel');
 const OTPModel = require('../models/OTPModel');
 const { EncodeToken } = require('../utility/TokenHelper');
 const EmailSend = require('../utility/EmailHelper');
-
+const ObjectId = mongoose.Types.ObjectId;
 const RegisterUserService = async (req) => {
   try {
     let reqBody = req.body;
@@ -48,7 +49,7 @@ const LoginUserService = async (req, res) => {
 const LogoutUserService = async (res) => {
   try {
     res.clearCookie('token');
-    return { status: 'success' };
+    return { status: true };
   } catch (error) {
     return { status: false, error: error.toString() };
   }
@@ -60,6 +61,27 @@ const UserReadService = async (req) => {
     let MatchStage = {
       $match: {
         email,
+      },
+    };
+
+    let Project = {
+      $project: {
+        password: 0,
+      },
+    };
+    let data = await UserModel.aggregate([MatchStage, Project]);
+    return { status: true, data: data };
+  } catch (error) {
+    return { status: false, error: error.toString() };
+  }
+};
+
+const UserReadByIDService = async (req) => {
+  let id = new ObjectId(req.params.id);
+  try {
+    let MatchStage = {
+      $match: {
+        _id: id,
       },
     };
 
@@ -228,4 +250,5 @@ module.exports = {
   RecoverVerifyOTPUserService,
   ResetPasswordUserService,
   UserAllReadService,
+  UserReadByIDService,
 };

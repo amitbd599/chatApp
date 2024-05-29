@@ -1,9 +1,27 @@
-import React, { useEffect, useState } from 'react';
-import { Read_all_user_api } from '../api/Api';
+import React, { useEffect, useRef, useState } from 'react';
+import socketIOClient from 'socket.io-client';
+import {
+  Read_all_user_api,
+  Read_user_api,
+  Read_user_by_id_api,
+  logout__Request__API,
+  profile_update__Request__API,
+} from '../api/Api';
 import { Link } from 'react-router-dom';
+import { ErrorToast, IsEmpty, SuccessToast, getBase64 } from '../helper/helper';
+import { FaXmark } from 'react-icons/fa6';
+import axios from 'axios';
+
+const ENDPOINT = 'http://localhost:5000';
+const BaseURL = 'http://localhost:5000/api/v1';
 
 const Home = () => {
+  let [activeUserChatID, setActiveUserChatID] = useState(null);
+  let [loading, setLoading] = useState(false);
   let [user, setUser] = useState([]);
+  let [singleUser, setSingleUser] = useState([]);
+  let [singleUserByID, SetSingleUserByID] = useState([]);
+  let [data, setData] = useState([]);
 
   useEffect(() => {
     Read_all_user_api().then((res) => {
@@ -11,9 +29,170 @@ const Home = () => {
         setUser(res?.data);
       }
     });
+    Read_user_api().then((res) => {
+      if (res?.status === true) {
+        setSingleUser(res?.data[0]);
+        setImg(res?.data[0]?.img);
+      }
+    });
   }, []);
 
-  console.log(user);
+  // socket start
+  const [messages, setMessages] = useState([]);
+  const [message, setMessage] = useState('');
+
+  const sendMessage = async (id) => {
+    let senderID = singleUser?._id;
+    console.log(senderID);
+    let receiverID = id;
+    const newMessage = { senderID, receiverID, message };
+    await axios.post(`${BaseURL}/create-chat`, newMessage, {
+      withCredentials: true,
+    });
+    const socket = socketIOClient(ENDPOINT);
+    socket.emit('chat message', newMessage);
+    setData(newMessage);
+    setMessage('');
+  };
+
+  // socket end
+  const deleteAllCookies = () => {
+    logout__Request__API().then((result) => {
+      if (result) {
+        window.location.href = '/login';
+      }
+    });
+  };
+
+  let passwordRef,
+    confirm_passwordRef,
+    firstNameRef,
+    lastNameRef,
+    mobileNoRef,
+    bioRef,
+    locationRef = useRef();
+
+  let [img, setImg] = useState('');
+  const bgHandel = (event) => {
+    const file = event.target.files[0];
+    if (file.size > 200 * 1024) {
+      ErrorToast('File size exceeds 200KB.');
+    } else {
+      getBase64(event.target.files[0]).then((base64Img) => {
+        setImg(base64Img);
+      });
+    }
+  };
+
+  const profileUpdate = () => {
+    setLoading(true);
+    let password = passwordRef.value;
+    let confirm_password = confirm_passwordRef.value;
+    let firstName = firstNameRef.value;
+    let lastName = lastNameRef.value;
+    let mobileNo = mobileNoRef.value;
+    let bio = bioRef.value;
+    let location = locationRef.value;
+    if (IsEmpty(password)) {
+      ErrorToast('Password required!');
+      setLoading(false);
+    } else if (IsEmpty(confirm_password)) {
+      ErrorToast('Password required!');
+      setLoading(false);
+    } else if (password !== confirm_password) {
+      ErrorToast('New password & confirm password not match!');
+      setLoading(false);
+    } else if (IsEmpty(firstName)) {
+      ErrorToast('First name required!');
+      setLoading(false);
+    } else if (IsEmpty(lastName)) {
+      ErrorToast('Last name required!');
+      setLoading(false);
+    } else if (IsEmpty(mobileNo)) {
+      ErrorToast('Phone number required!');
+      setLoading(false);
+    } else if (IsEmpty(bio)) {
+      ErrorToast('Bio required!');
+      setLoading(false);
+    } else if (IsEmpty(location)) {
+      ErrorToast('Location required!');
+      setLoading(false);
+    } else {
+      let body = {
+        password,
+        firstName,
+        lastName,
+        mobileNo,
+        img,
+        bio,
+        location,
+      };
+
+      profile_update__Request__API(body).then((result) => {
+        if (result === true) {
+          setLoading(false);
+          SuccessToast('Profile updated');
+          Read_user_api().then((res) => {
+            if (res?.status === true) {
+              setSingleUser(res?.data[0]);
+              setImg(res?.data[0]?.img);
+            }
+          });
+        }
+      });
+    }
+  };
+
+  let filterUser = user.filter((item) => item?._id !== singleUser?._id);
+
+  let getID = async (id) => {
+    const read_sender = await axios.post(
+      `${BaseURL}/read-sender-chat`,
+      { receiverID: id },
+      {
+        withCredentials: true,
+      },
+    );
+    const read_receiver = await axios.post(
+      `${BaseURL}/read-receiver-chat`,
+      { senderID: id },
+      {
+        withCredentials: true,
+      },
+    );
+
+    let data_1 = read_sender?.data?.data;
+    let data_2 = read_receiver?.data?.data;
+    // console.log({ data_1: data_1, data_2: data_2 });
+
+    let combinedData = data_1.concat(data_2);
+    combinedData.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+    setMessages(combinedData);
+    setActiveUserChatID(id);
+
+    Read_user_by_id_api(id).then((res) => {
+      if (res?.status === true) {
+        SetSingleUserByID(res?.data[0]);
+      }
+    });
+  };
+
+  useEffect(() => {
+    const socket = socketIOClient(ENDPOINT);
+
+    socket.on('chat message', (msg) => {
+      msg.receiverID = activeUserChatID;
+      console.log(msg);
+      data.senderID = singleUser?._id;
+      setMessages((messages) => [...messages, msg]);
+    });
+
+    return () => socket.disconnect();
+  }, []);
+
+  console.log(singleUser?._id);
+
   return (
     <div className="layout-wrapper d-lg-flex">
       {/* Start left sidebar-menu */}
@@ -85,26 +264,22 @@ const Home = () => {
                 <i className="ri-settings-4-line" />
               </a>
             </li>
-            <li className="nav-item mt-lg-auto">
-              <a className="nav-link light-dark-mode" href="#">
-                <i className="ri-moon-line" />
-              </a>
-            </li>
+            <li className="nav-item mt-lg-auto"></li>
             <li className="nav-item dropdown profile-user-dropdown">
-              <a
+              <Link
                 className="nav-link dropdown-toggle bg-light"
-                href="#"
+                to="#"
                 role="button"
                 data-bs-toggle="dropdown"
                 aria-haspopup="true"
                 aria-expanded="false"
               >
                 <img
-                  src="assets/images/users/avatar-1.jpg"
+                  src={singleUser?.img}
                   alt=""
                   className="profile-user rounded-circle"
                 />
-              </a>
+              </Link>
               <div className="dropdown-menu">
                 <a
                   className="dropdown-item d-flex align-items-center justify-content-between"
@@ -124,20 +299,14 @@ const Home = () => {
                 >
                   Setting <i className="bx bx-cog text-muted ms-1" />
                 </a>
-                <a
-                  className="dropdown-item d-flex align-items-center justify-content-between"
-                  href="auth-changepassword.html"
-                >
-                  Change Password{' '}
-                  <i className="bx bx-lock-open text-muted ms-1" />
-                </a>
+
                 <div className="dropdown-divider" />
-                <a
+                <button
+                  onClick={deleteAllCookies}
                   className="dropdown-item d-flex align-items-center justify-content-between"
-                  href="auth-logout.html"
                 >
                   Log out <i className="bx bx-log-out-circle text-muted ms-1" />
-                </a>
+                </button>
               </div>
             </li>
           </ul>
@@ -171,43 +340,6 @@ const Home = () => {
                         <div className="flex-grow-1">
                           <h5 className="text-white mb-0">My Profile</h5>
                         </div>
-                        <div className="flex-shrink-0">
-                          <div className="dropdown">
-                            <button
-                              className="btn nav-btn text-white dropdown-toggle"
-                              type="button"
-                              data-bs-toggle="dropdown"
-                              aria-haspopup="true"
-                              aria-expanded="false"
-                            >
-                              <i className="bx bx-dots-vertical-rounded" />
-                            </button>
-                            <div className="dropdown-menu dropdown-menu-end">
-                              <a
-                                className="dropdown-item d-flex align-items-center justify-content-between"
-                                href="#"
-                              >
-                                Info{' '}
-                                <i className="bx bx-info-circle ms-2 text-muted" />
-                              </a>
-                              <a
-                                className="dropdown-item d-flex align-items-center justify-content-between"
-                                href="#"
-                              >
-                                Setting{' '}
-                                <i className="bx bx-cog text-muted ms-2" />
-                              </a>
-                              <div className="dropdown-divider" />
-                              <a
-                                className="dropdown-item d-flex align-items-center justify-content-between"
-                                href="#"
-                              >
-                                Help{' '}
-                                <i className="bx bx-help-circle ms-2 text-muted" />
-                              </a>
-                            </div>
-                          </div>
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -216,25 +348,26 @@ const Home = () => {
               <div className="text-center border-bottom border-bottom-dashed pt-2 pb-4 mt-n5 position-relative">
                 <div className="mb-lg-3 mb-2">
                   <img
-                    src="assets/images/users/avatar-1.jpg"
+                    src={singleUser?.img}
                     className="rounded-circle avatar-lg img-thumbnail"
                     alt=""
                   />
                 </div>
-                <h5 className="fs-17 mb-1 text-truncate">Dushane Daniel</h5>
+                <h5 className="fs-17 mb-1 text-truncate">
+                  {singleUser?.firstName} {singleUser?.lastName}
+                </h5>
                 <p className="text-muted fs-14 text-truncate mb-0">
-                  Front end Developer
+                  {singleUser?.email}
+                </p>
+                <p className="text-muted fs-14 text-truncate mb-0">
+                  {singleUser?.mobileNo}
                 </p>
               </div>
               {/* End profile user */}
               {/* Start user-profile-desc */}
               <div className="p-4 profile-desc" data-simplebar="">
                 <div className="text-muted">
-                  <p className="mb-3">
-                    A professional profile is an introductory section on your
-                    resume that highlights your relevant qualifications and
-                    skills.
-                  </p>
+                  <p className="mb-3">{singleUser?.bio}</p>
                 </div>
                 <div className="border-bottom border-bottom-dashed mb-4 pb-2">
                   <div className="d-flex py-2 align-items-center">
@@ -242,7 +375,10 @@ const Home = () => {
                       <i className="bx bx-user align-middle text-muted fs-19" />
                     </div>
                     <div className="flex-grow-1">
-                      <p className="mb-0">Dushane Daniel</p>
+                      <p className="mb-0">
+                        {' '}
+                        {singleUser?.firstName} {singleUser?.lastName}
+                      </p>
                     </div>
                   </div>
                   <div className="d-flex py-2 align-items-center">
@@ -250,7 +386,7 @@ const Home = () => {
                       <i className="ri-phone-line align-middle text-muted fs-19" />
                     </div>
                     <div className="flex-grow-1">
-                      <p className="mb-0">+(365) 1456 12584</p>
+                      <p className="mb-0"> {singleUser?.mobileNo}</p>
                     </div>
                   </div>
                   <div className="d-flex py-2 align-items-center">
@@ -258,7 +394,7 @@ const Home = () => {
                       <i className="ri-message-2-line align-middle text-muted fs-19" />
                     </div>
                     <div className="flex-grow-1">
-                      <p className="fw-medium mb-0">dushanedaniel@gmail.com</p>
+                      <p className="fw-medium mb-0"> {singleUser?.email}</p>
                     </div>
                   </div>
                   <div className="d-flex py-2 align-items-center">
@@ -266,7 +402,7 @@ const Home = () => {
                       <i className="ri-map-pin-2-line align-middle text-muted fs-19" />
                     </div>
                     <div className="flex-grow-1">
-                      <p className="mb-0">California, USA</p>
+                      <p className="mb-0"> {singleUser?.location}</p>
                     </div>
                   </div>
                 </div>
@@ -299,7 +435,7 @@ const Home = () => {
                   className="list-unstyled chat-list chat-user-list"
                   id="favourite-users"
                 >
-                  {user.map((item, index) => (
+                  {filterUser.map((item, index) => (
                     <li
                       id="contact-id-1"
                       data-name="favorite"
@@ -307,7 +443,8 @@ const Home = () => {
                       key={index}
                     >
                       <Link
-                        to="javascript: void(0);"
+                        onClick={() => getID(item?._id)}
+                        to="#"
                         className="unread-msg-user"
                       >
                         <div className="d-flex align-items-center">
@@ -324,7 +461,7 @@ const Home = () => {
                               {item?.firstName} {item?.lastName}
                             </p>
                             <p className="text-truncate text-muted fs-13 mb-0">
-                              {item?.mobileNo}
+                              {item?.email}
                             </p>
                           </div>
                         </div>
@@ -393,29 +530,6 @@ const Home = () => {
                         <div className="flex-grow-1">
                           <h5 className="text-white mb-0">Settings</h5>
                         </div>
-                        <div className="flex-shrink-0">
-                          <div
-                            className="avatar-xs p-0 rounded-circle profile-photo-edit"
-                            data-bs-toggle="tooltip"
-                            data-bs-trigger="hover"
-                            data-bs-placement="bottom"
-                            title="Change Background"
-                          >
-                            <input
-                              id="profile-foreground-img-file-input"
-                              type="file"
-                              className="profile-foreground-img-file-input"
-                            />
-                            <label
-                              htmlFor="profile-foreground-img-file-input"
-                              className="profile-photo-edit avatar-xs"
-                            >
-                              <span className="avatar-title rounded-circle bg-light text-body">
-                                <i className="bx bxs-pencil" />
-                              </span>
-                            </label>
-                          </div>
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -424,53 +538,10 @@ const Home = () => {
               <div className="text-center p-3 p-lg-4 border-bottom pt-2 pt-lg-2 mt-n5 position-relative">
                 <div className="mb-3 profile-user">
                   <img
-                    src="assets/images/users/avatar-1.jpg"
+                    src={singleUser?.img}
                     className="rounded-circle avatar-lg img-thumbnail user-profile-image"
-                    alt="user-profile-image"
+                    alt="user-profile"
                   />
-                  <div className="avatar-xs p-0 rounded-circle profile-photo-edit">
-                    <input
-                      id="profile-img-file-input"
-                      type="file"
-                      className="profile-img-file-input"
-                    />
-                    <label
-                      htmlFor="profile-img-file-input"
-                      className="profile-photo-edit avatar-xs"
-                    >
-                      <span className="avatar-title rounded-circle bg-light text-body">
-                        <i className="bx bxs-camera" />
-                      </span>
-                    </label>
-                  </div>
-                </div>
-                <h5 className="fs-16 mb-1 text-truncate" />
-                <div className="dropdown d-inline-block">
-                  <a
-                    className="text-muted dropdown-toggle d-block"
-                    href="#"
-                    role="button"
-                    data-bs-toggle="dropdown"
-                    aria-haspopup="true"
-                    aria-expanded="false"
-                  >
-                    <i className="bx bxs-circle text-success fs-10 align-middle" />{' '}
-                    Active <i className="mdi mdi-chevron-down" />
-                  </a>
-                  <div className="dropdown-menu">
-                    <a className="dropdown-item" href="#">
-                      <i className="bx bxs-circle text-success fs-10 me-1 align-middle" />
-                      Active
-                    </a>
-                    <a className="dropdown-item" href="#">
-                      <i className="bx bxs-circle text-warning fs-10 me-1 align-middle" />
-                      Away
-                    </a>
-                    <a className="dropdown-item" href="#">
-                      <i className="bx bxs-circle text-danger fs-10 me-1 align-middle" />{' '}
-                      Do not disturb
-                    </a>
-                  </div>
                 </div>
               </div>
               {/* End profile user */}
@@ -488,10 +559,7 @@ const Home = () => {
                       >
                         <div className="d-flex align-items-center">
                           <div className="flex-shrink-0 me-3 avatar-xs">
-                            <div
-                              className="avatar-title bg-info-subtle 
-             text-info text-info rounded"
-                            >
+                            <div className="avatar-title bg-info-subtle  text-info text-info rounded">
                               <i className="bx bxs-user" />
                             </div>
                           </div>
@@ -506,67 +574,78 @@ const Home = () => {
                       data-bs-parent="#settingprofile"
                     >
                       <div className="accordion-body edit-input">
-                        <div className="float-end">
-                          <a
-                            href="#"
-                            className="badge bg-light text-muted"
-                            id="user-profile-edit-btn"
-                          >
-                            {' '}
-                            <i
-                              className="bx bxs-pencil align-middle"
-                              id="edit-icon"
-                            />
-                          </a>
-                        </div>
                         <div>
                           <label
                             htmlFor="exampleInputPassword1"
                             className="form-label text-muted fs-13"
                           >
-                            Name
+                            FirstName
                           </label>
                           <input
+                            ref={(input) => (firstNameRef = input)}
                             type="text"
                             className="form-control"
                             id="exampleInputPassword1"
-                            defaultValue="Dushane Daniel"
-                            placeholder="Enter name"
+                            defaultValue={singleUser?.firstName}
+                            placeholder="Enter first name"
                             disabled=""
                           />
                         </div>
-                        <div>
-                          <label
-                            htmlFor="exampleInputPassword1"
-                            className="form-label text-muted fs-13"
-                          >
-                            Email
-                          </label>
-                          <input
-                            type="email"
-                            className="form-control"
-                            id="exampleInputPassword1"
-                            defaultValue="dashanedaniel@vhato.com"
-                            placeholder="Enter email"
-                            disabled=""
-                          />
-                        </div>
+
                         <div className="mt-3">
                           <label
                             htmlFor="exampleInputPassword1"
                             className="form-label text-muted fs-13"
                           >
-                            Phone No
+                            LastName
                           </label>
                           <input
+                            ref={(input) => (lastNameRef = input)}
                             type="text"
                             className="form-control"
                             id="exampleInputPassword1"
-                            defaultValue="+(245) 4577 14523"
-                            placeholder="Enter phone no"
+                            defaultValue={singleUser?.lastName}
+                            placeholder="Enter last name"
                             disabled=""
                           />
                         </div>
+
+                        <div className="mt-3">
+                          <label
+                            htmlFor="exampleInputPassword1"
+                            className="form-label text-muted fs-13"
+                          >
+                            MobileNo
+                          </label>
+                          <input
+                            ref={(input) => (mobileNoRef = input)}
+                            type="text"
+                            className="form-control"
+                            id="exampleInputPassword1"
+                            defaultValue={singleUser?.mobileNo}
+                            placeholder="Enter mobile No"
+                            disabled=""
+                          />
+                        </div>
+
+                        <div className="mt-3">
+                          <label
+                            htmlFor="exampleInputPassword1"
+                            className="form-label text-muted fs-13"
+                          >
+                            Bio
+                          </label>
+                          <input
+                            ref={(input) => (bioRef = input)}
+                            type="text"
+                            className="form-control"
+                            id="exampleInputPassword1"
+                            defaultValue={singleUser?.bio}
+                            placeholder="Enter bio"
+                            disabled=""
+                          />
+                        </div>
+
                         <div className="mt-3">
                           <label
                             htmlFor="exampleInputPassword1"
@@ -575,13 +654,93 @@ const Home = () => {
                             Location
                           </label>
                           <input
+                            ref={(input) => (locationRef = input)}
                             type="text"
                             className="form-control"
                             id="exampleInputPassword1"
-                            defaultValue="California, USA"
-                            placeholder="Location"
+                            defaultValue={singleUser?.location}
+                            placeholder="Enter location"
                             disabled=""
                           />
+                        </div>
+
+                        <div className="mt-3">
+                          <label
+                            htmlFor="exampleInputPassword1"
+                            className="form-label text-muted fs-13"
+                          >
+                            Password
+                          </label>
+                          <input
+                            ref={(input) => (passwordRef = input)}
+                            type="password"
+                            className="form-control"
+                            id="exampleInputPassword1"
+                            defaultValue=""
+                            placeholder="Enter password"
+                            disabled=""
+                          />
+                        </div>
+                        <div className="mt-3">
+                          <label
+                            htmlFor="exampleInputPassword1"
+                            className="form-label text-muted fs-13"
+                          >
+                            Confirm Password
+                          </label>
+                          <input
+                            ref={(input) => (confirm_passwordRef = input)}
+                            type="password"
+                            className="form-control"
+                            id="exampleInputPassword1"
+                            defaultValue=""
+                            placeholder="Enter Confirm password"
+                            disabled=""
+                          />
+                        </div>
+
+                        <div className="mt-3">
+                          <label
+                            htmlFor="exampleInputPassword1"
+                            className="form-label text-muted fs-13"
+                          >
+                            Change profile image
+                          </label>
+                          {!!img === false ? (
+                            <input
+                              id="bg"
+                              type="file"
+                              className="hidden"
+                              onChange={(event) => bgHandel(event)}
+                            />
+                          ) : (
+                            <div className="show_img">
+                              <div className="image_inner">
+                                <img
+                                  src={img}
+                                  alt="Selected"
+                                  className="w-[100px] rounded-xl"
+                                />
+                              </div>
+
+                              {img && (
+                                <div className="close_btn">
+                                  <FaXmark
+                                    onClick={() => setImg('')}
+                                    className=""
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <div className="mt-4 mb-4">
+                          <button onClick={profileUpdate} className="my_btn">
+                            Update profile
+                            <div className="arrow-wrapper">
+                              <div className="arrow" />
+                            </div>
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -629,15 +788,13 @@ const Home = () => {
                           </div>
                           <div className="flex-grow-1 overflow-hidden">
                             <h6 className="text-truncate mb-0 fs-18">
-                              <a
-                                href="#"
-                                className="user-profile-show text-reset"
-                              >
-                                Victoria Lane
-                              </a>
+                              <span className="user-profile-show text-reset">
+                                {singleUserByID?.firstName}{' '}
+                                {singleUserByID?.lastName}
+                              </span>
                             </h6>
                             <p className="text-truncate text-muted mb-0">
-                              <small>Online</small>
+                              <small>{singleUserByID?.email}</small>
                             </p>
                           </div>
                         </div>
@@ -656,7 +813,19 @@ const Home = () => {
                 <ul
                   className="list-unstyled chat-conversation-list"
                   id="users-conversation"
-                ></ul>
+                >
+                  {messages.map((item, index) => (
+                    // <li key={index}>{item?.message}</li>
+                    <div
+                      key={index}
+                      className={`message ${
+                        item?.senderID === singleUser?._id ? 'right' : 'left'
+                      }`}
+                    >
+                      {item.message}
+                    </div>
+                  ))}
+                </ul>
               </div>
 
               {/* end chat conversation end */}
@@ -665,7 +834,7 @@ const Home = () => {
             {/* start chat input section */}
             <div className="position-relative">
               <div className="chat-input-section p-4 border-top">
-                <form id="chatinput-form" encType="multipart/form-data">
+                <div id="chatinput-form" encType="multipart/form-data">
                   <div className="row g-0 align-items-center">
                     <div className="file_Upload" />
                     <div className="col-auto"></div>
@@ -675,6 +844,8 @@ const Home = () => {
                           Please Enter a Message
                         </div>
                         <input
+                          value={message}
+                          onChange={(e) => setMessage(e.target.value)}
                           autoComplete="off"
                           type="text"
                           className="form-control  bg-light border-0 chat-input"
@@ -688,6 +859,7 @@ const Home = () => {
                       <div className="chat-input-links ms-2 gap-md-1">
                         <div className="links-list-item">
                           <button
+                            onClick={() => sendMessage(activeUserChatID)}
                             type="submit"
                             className="btn btn-primary btn-lg chat-send waves-effect waves-light"
                             data-bs-toggle="collapse"
@@ -702,648 +874,11 @@ const Home = () => {
                       </div>
                     </div>
                   </div>
-                </form>
-              </div>
-              <div className="replyCard">
-                <div className="card mb-0">
-                  <div className="card-body py-3">
-                    <div className="replymessage-block mb-0 d-flex align-items-start">
-                      <div className="flex-grow-1">
-                        <h5 className="conversation-name" />
-                        <p className="mb-0" />
-                      </div>
-                      <div className="flex-shrink-0">
-                        <button
-                          type="button"
-                          id="close_toggle"
-                          className="btn btn-sm btn-link mt-n2 me-n3 fs-18"
-                        >
-                          <i className="bx bx-x align-middle" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
             {/* end chat input section */}
           </div>
-          {/* end chat conversation section */}
-          {/* start User profile detail sidebar */}
-          <div className="user-profile-sidebar">
-            <div className="p-3 border-bottom">
-              <div className="user-profile-img">
-                <img
-                  src="assets/images/users/avatar-2.jpg"
-                  className="profile-img rounded"
-                  alt=""
-                />
-                <div className="overlay-content rounded">
-                  <div className="user-chat-nav p-2">
-                    <div className="d-flex w-100">
-                      <div className="flex-grow-1">
-                        <button
-                          type="button"
-                          className="btn nav-btn text-white user-profile-show d-none d-lg-block"
-                        >
-                          <i className="bx bx-x" />
-                        </button>
-                        <button
-                          type="button"
-                          className="btn nav-btn text-white user-profile-show d-block d-lg-none"
-                        >
-                          <i className="bx bx-left-arrow-alt" />
-                        </button>
-                      </div>
-                      <div className="flex-shrink-0">
-                        <div className="dropdown">
-                          <button
-                            className="btn nav-btn text-white dropdown-toggle"
-                            type="button"
-                            data-bs-toggle="dropdown"
-                            aria-haspopup="true"
-                            aria-expanded="false"
-                          >
-                            <i className="bx bx-dots-vertical-rounded" />
-                          </button>
-                          <div className="dropdown-menu dropdown-menu-end">
-                            <a
-                              className="dropdown-item d-flex justify-content-between align-items-center d-lg-none user-profile-show"
-                              href="#"
-                            >
-                              View Profile{' '}
-                              <i className="bx bx-user text-muted" />
-                            </a>
-                            <a
-                              className="dropdown-item d-flex justify-content-between align-items-center d-lg-none"
-                              href="#"
-                              data-bs-toggle="modal"
-                              data-bs-target=".audiocallModal"
-                            >
-                              Audio{' '}
-                              <i className="bx bxs-phone-call text-muted" />
-                            </a>
-                            <a
-                              className="dropdown-item d-flex justify-content-between align-items-center d-lg-none"
-                              href="#"
-                              data-bs-toggle="modal"
-                              data-bs-target=".videocallModal"
-                            >
-                              Video <i className="bx bx-video text-muted" />
-                            </a>
-                            <a
-                              className="dropdown-item d-flex justify-content-between align-items-center"
-                              href="#"
-                            >
-                              Archive <i className="bx bx-archive text-muted" />
-                            </a>
-                            <a
-                              className="dropdown-item d-flex justify-content-between align-items-center"
-                              href="#"
-                            >
-                              Muted{' '}
-                              <i className="bx bx-microphone-off text-muted" />
-                            </a>
-                            <a
-                              className="dropdown-item d-flex justify-content-between align-items-center"
-                              href="#"
-                            >
-                              Delete <i className="bx bx-trash text-muted" />
-                            </a>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-auto p-3">
-                    <h5 className="user-name mb-0 text-truncate">
-                      Victoria Lane
-                    </h5>
-                    <p className="fs-14 text-truncate user-profile-status mt-1 mb-0">
-                      <i className="bx bxs-circle fs-10 text-success me-1 ms-0" />
-                      Online
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            {/* End profile user */}
-            {/* Start user-profile-desc */}
-            <div className="p-4 user-profile-desc" data-simplebar="">
-              <div className="text-center border-bottom border-bottom-dashed">
-                <div className="d-flex gap-2 justify-content-center mb-4">
-                  <button type="button" className="btn avatar-sm p-0">
-                    <span
-                      className="avatar-title rounded bg-info-subtle 
-         text-info text-info"
-                    >
-                      <i className="bx bxs-message-alt-detail" />
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    className="btn avatar-sm p-0 favourite-btn"
-                  >
-                    <span
-                      className="avatar-title rounded bg-danger-subtle 
-         text-danger text-body"
-                    >
-                      <i className="bx bx-heart" />
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    className="btn avatar-sm p-0"
-                    data-bs-toggle="modal"
-                    data-bs-target=".audiocallModal"
-                  >
-                    <span className="avatar-title rounded bg-success-subtle text-success">
-                      <i className="bx bxs-phone-call" />
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    className="btn avatar-sm p-0"
-                    data-bs-toggle="modal"
-                    data-bs-target=".videocallModal"
-                  >
-                    <span
-                      className="avatar-title rounded bg-warning-subtle 
-         text-warning text-warning"
-                    >
-                      <i className="bx bx-video" />
-                    </span>
-                  </button>
-                  <div className="dropdown">
-                    <button
-                      className="btn avatar-sm p-0 dropdown-toggle"
-                      type="button"
-                      data-bs-toggle="dropdown"
-                      aria-haspopup="true"
-                      aria-expanded="false"
-                    >
-                      <span
-                        className="avatar-title bg-primary-subtle 
-         text-primary  text-primary rounded"
-                      >
-                        <i className="bx bx-dots-horizontal-rounded" />
-                      </span>
-                    </button>
-                    <div className="dropdown-menu dropdown-menu-end">
-                      <a
-                        className="dropdown-item d-flex justify-content-between align-items-center"
-                        href="#"
-                      >
-                        Archive <i className="bx bx-archive text-muted" />
-                      </a>
-                      <a
-                        className="dropdown-item d-flex justify-content-between align-items-center"
-                        href="#"
-                      >
-                        Muted <i className="bx bx-microphone-off text-muted" />
-                      </a>
-                      <a
-                        className="dropdown-item d-flex justify-content-between align-items-center"
-                        href="#"
-                      >
-                        Delete <i className="bx bx-trash text-muted" />
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="text-muted pt-4">
-                <h5 className="fs-12 text-muted text-uppercase">Status :</h5>
-                <p className="mb-4">
-                  A professional profile is a brief summary of your skills,
-                  strengths, and key experiences.
-                </p>
-              </div>
-              <div className="pb-4 border-bottom border-bottom-dashed mb-4">
-                <h5 className="fs-12 text-muted text-uppercase mb-2">Info :</h5>
-                <div className="d-flex align-items-center">
-                  <div className="flex-shrink-0">
-                    <i className="ri-user-line align-middle fs-15 text-muted" />
-                  </div>
-                  <div className="flex-grow-1 ms-3">
-                    <h5 className="fs-14 text-truncate mb-0"> Victoria Lane</h5>
-                  </div>
-                </div>
-                <div className="d-flex align-items-center mt-3">
-                  <div className="flex-shrink-0">
-                    <i className="ri-mail-line align-middle fs-15 text-muted" />
-                  </div>
-                  <div className="flex-grow-1 ms-3">
-                    <h5 className="fs-14 text-truncate mb-0">
-                      bellacote@vhato.com
-                    </h5>
-                  </div>
-                </div>
-                <div className="d-flex align-items-center mt-3">
-                  <div className="flex-shrink-0">
-                    <i className="ri-phone-line align-middle fs-15 text-muted" />
-                  </div>
-                  <div className="flex-grow-1 ms-3">
-                    <h5 className="fs-14 text-truncate mb-0">
-                      +(345) 3216 48751
-                    </h5>
-                  </div>
-                </div>
-                <div className="d-flex align-items-center mt-3">
-                  <div className="flex-shrink-0">
-                    <i className="ri-mail-line align-middle fs-15 text-muted" />
-                  </div>
-                  <div className="flex-grow-1 ms-3">
-                    <h5 className="fs-14 text-truncate mb-0">
-                      California, USA
-                    </h5>
-                  </div>
-                </div>
-              </div>
-              <div className="pb-4 border-bottom border-bottom-dashed mb-4">
-                <div className="d-flex">
-                  <div className="flex-grow-1">
-                    <h5 className="fs-12 text-muted text-uppercase">
-                      Group in common
-                    </h5>
-                  </div>
-                </div>
-                <ul className="list-unstyled chat-list mx-n4">
-                  <li>
-                    <a href="javascript: void(0);">
-                      <div className="d-flex align-items-center">
-                        <img
-                          src="assets/images/users/group-img.jpg"
-                          alt=""
-                          className="avatar-sm rounded-circle me-3"
-                        />
-                        <div className="flex-grow-1 overflow-hidden">
-                          <h6 className="text-truncate mb-0">Landing Design</h6>
-                        </div>
-                      </div>
-                    </a>
-                  </li>
-                  <li>
-                    <a href="javascript: void(0);">
-                      <div className="d-flex align-items-center">
-                        <div className="flex-shrink-0 avatar-sm me-3">
-                          <span className="avatar-title rounded-circle bg-light text-reset">
-                            SM
-                          </span>
-                        </div>
-                        <div className="flex-grow-1 overflow-hidden">
-                          <h6 className="text-truncate mb-0">
-                            Sales &amp; Marketing
-                          </h6>
-                        </div>
-                      </div>
-                    </a>
-                  </li>
-                </ul>
-              </div>
-              <div className="pb-4 border-bottom border-bottom-dashed mb-4">
-                <div className="d-flex align-items-center mb-3">
-                  <div className="flex-grow-1">
-                    <h5 className="fs-12 text-muted text-uppercase mb-0">
-                      Shared Images
-                    </h5>
-                  </div>
-                  <div className="flex-shrink-0">
-                    <a href="#" className="fs-12 fw-medium d-block">
-                      Show all
-                    </a>
-                  </div>
-                </div>
-                <div className="profile-media-img">
-                  <div className="row g-1">
-                    <div className="col-lg-4 col-6">
-                      <a href="#">
-                        <img
-                          src="assets/images/small/img-1.jpg"
-                          alt="media img"
-                          className="img-fluid rounded"
-                        />
-                      </a>
-                    </div>
-                    <div className="col-lg-4 col-6">
-                      <a href="#">
-                        <img
-                          src="assets/images/small/img-2.jpg"
-                          alt="media img"
-                          className="img-fluid rounded"
-                        />
-                      </a>
-                    </div>
-                    <div className="col-lg-4 col-6">
-                      <a href="#">
-                        <img
-                          src="assets/images/small/img-3.jpg"
-                          alt="media img"
-                          className="img-fluid rounded"
-                        />
-                      </a>
-                    </div>
-                    <div className="col-lg-4 col-6">
-                      <a href="#">
-                        <img
-                          src="assets/images/small/img-4.jpg"
-                          alt="media img"
-                          className="img-fluid rounded"
-                        />
-                      </a>
-                    </div>
-                    <div className="col-lg-4 col-6">
-                      <a href="#">
-                        <img
-                          src="assets/images/small/img-5.jpg"
-                          alt="media img"
-                          className="img-fluid rounded"
-                        />
-                      </a>
-                    </div>
-                    <div className="col-lg-4 col-6">
-                      <div className="position-relative rounded overflow-hidden">
-                        <a href="javascript:void(0);" className="d-block">
-                          <img
-                            src="assets/images/small/img-6.jpg"
-                            alt="media img"
-                            className="img-fluid rounded"
-                          />
-                          <div className="bg-overlay" />
-                          <div className="position-absolute top-50 start-50 text-white translate-middle fs-16">
-                            +10
-                          </div>
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <div>
-                  <h5 className="fs-11 text-muted text-uppercase mb-3">
-                    Attached Files
-                  </h5>
-                </div>
-                <div>
-                  <div className="card mb-2 border border-dashed">
-                    <div className="card-body p-2">
-                      <div className="d-flex align-items-center">
-                        <div className="flex-shrink-0 ms-1 me-3">
-                          <img
-                            src="assets/images/pdf-file.png"
-                            alt=""
-                            className="avatar-xs"
-                          />
-                        </div>
-                        <div className="flex-grow-1 overflow-hidden">
-                          <h5 className="fs-14 text-truncate mb-1">
-                            design-phase-1-approved.pdf
-                          </h5>
-                          <p className="text-muted fs-13 mb-0">12.5 MB</p>
-                        </div>
-                        <div className="flex-shrink-0 ms-3">
-                          <div className="d-flex gap-2">
-                            <div>
-                              <a href="#" className="text-muted px-1">
-                                <i className="bx bxs-download" />
-                              </a>
-                            </div>
-                            <div className="dropdown">
-                              <a
-                                className="dropdown-toggle text-muted px-1"
-                                href="#"
-                                role="button"
-                                data-bs-toggle="dropdown"
-                                aria-haspopup="true"
-                                aria-expanded="false"
-                              >
-                                <i className="bx bx-dots-horizontal-rounded" />
-                              </a>
-                              <div className="dropdown-menu dropdown-menu-end">
-                                <a
-                                  className="dropdown-item d-flex align-items-center justify-content-between"
-                                  href="#"
-                                >
-                                  Share{' '}
-                                  <i className="bx bx-share-alt ms-2 text-muted" />
-                                </a>
-                                <a
-                                  className="dropdown-item d-flex align-items-center justify-content-between"
-                                  href="#"
-                                >
-                                  Bookmark{' '}
-                                  <i className="bx bx-bookmarks text-muted ms-2" />
-                                </a>
-                                <div className="dropdown-divider" />
-                                <a
-                                  className="dropdown-item d-flex align-items-center justify-content-between"
-                                  href="#"
-                                >
-                                  Delete{' '}
-                                  <i className="bx bx-trash ms-2 text-muted" />
-                                </a>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="card border border-dashed mb-2">
-                    <div className="card-body p-2">
-                      <div className="d-flex align-items-center">
-                        <div className="flex-shrink-0 ms-1 me-3">
-                          <img
-                            src="assets/images/image-file.png"
-                            alt=""
-                            className="avatar-xs"
-                          />
-                        </div>
-                        <div className="flex-grow-1 overflow-hidden">
-                          <h5 className="fs-14 text-truncate mb-1">
-                            Image-1.jpg
-                          </h5>
-                          <p className="text-muted fs-13 mb-0">4.2 MB</p>
-                        </div>
-                        <div className="flex-shrink-0 ms-3">
-                          <div className="d-flex gap-2">
-                            <div>
-                              <a href="#" className="text-muted px-1">
-                                <i className="bx bxs-download" />
-                              </a>
-                            </div>
-                            <div className="dropdown">
-                              <a
-                                className="dropdown-toggle text-muted px-1"
-                                href="#"
-                                role="button"
-                                data-bs-toggle="dropdown"
-                                aria-haspopup="true"
-                                aria-expanded="false"
-                              >
-                                <i className="bx bx-dots-horizontal-rounded" />
-                              </a>
-                              <div className="dropdown-menu dropdown-menu-end">
-                                <a
-                                  className="dropdown-item d-flex align-items-center justify-content-between"
-                                  href="#"
-                                >
-                                  Share{' '}
-                                  <i className="bx bx-share-alt ms-2 text-muted" />
-                                </a>
-                                <a
-                                  className="dropdown-item d-flex align-items-center justify-content-between"
-                                  href="#"
-                                >
-                                  Bookmark{' '}
-                                  <i className="bx bx-bookmarks text-muted ms-2" />
-                                </a>
-                                <div className="dropdown-divider" />
-                                <a
-                                  className="dropdown-item d-flex align-items-center justify-content-between"
-                                  href="#"
-                                >
-                                  Delete{' '}
-                                  <i className="bx bx-trash ms-2 text-muted" />
-                                </a>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="card p-2 border border-dashed mb-2">
-                    <div className="d-flex align-items-center">
-                      <div className="flex-shrink-0 ms-1 me-3">
-                        <img
-                          src="assets/images/image-file.png"
-                          alt=""
-                          className="avatar-xs"
-                        />
-                      </div>
-                      <div className="flex-grow-1 overflow-hidden">
-                        <h5 className="fs-14 text-truncate mb-1">
-                          Image-2.jpg
-                        </h5>
-                        <p className="text-muted fs-13 mb-0">3.1 MB</p>
-                      </div>
-                      <div className="flex-shrink-0 ms-3">
-                        <div className="d-flex gap-2">
-                          <div>
-                            <a href="#" className="text-muted px-1">
-                              <i className="bx bxs-download" />
-                            </a>
-                          </div>
-                          <div className="dropdown">
-                            <a
-                              className="dropdown-toggle text-muted px-1"
-                              href="#"
-                              role="button"
-                              data-bs-toggle="dropdown"
-                              aria-haspopup="true"
-                              aria-expanded="false"
-                            >
-                              <i className="bx bx-dots-horizontal-rounded" />
-                            </a>
-                            <div className="dropdown-menu dropdown-menu-end">
-                              <a
-                                className="dropdown-item d-flex align-items-center justify-content-between"
-                                href="#"
-                              >
-                                Share{' '}
-                                <i className="bx bx-share-alt ms-2 text-muted" />
-                              </a>
-                              <a
-                                className="dropdown-item d-flex align-items-center justify-content-between"
-                                href="#"
-                              >
-                                Bookmark{' '}
-                                <i className="bx bx-bookmarks text-muted ms-2" />
-                              </a>
-                              <div className="dropdown-divider" />
-                              <a
-                                className="dropdown-item d-flex align-items-center justify-content-between"
-                                href="#"
-                              >
-                                Delete{' '}
-                                <i className="bx bx-trash ms-2 text-muted" />
-                              </a>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="card p-2 border border-dashed mb-0">
-                    <div className="d-flex align-items-center">
-                      <div className="flex-shrink-0 ms-1 me-3">
-                        <img
-                          src="assets/images/zip-file.png"
-                          alt=""
-                          className="avatar-xs"
-                        />
-                      </div>
-                      <div className="flex-grow-1 overflow-hidden">
-                        <h5 className="fs-14 text-truncate mb-1">
-                          Landing-A.zip
-                        </h5>
-                        <p className="text-muted fs-13 mb-0">6.7 MB</p>
-                      </div>
-                      <div className="flex-shrink-0 ms-3">
-                        <div className="d-flex gap-2">
-                          <div>
-                            <a href="#" className="text-muted px-1">
-                              <i className="bx bxs-download" />
-                            </a>
-                          </div>
-                          <div className="dropdown">
-                            <a
-                              className="dropdown-toggle text-muted px-1"
-                              href="#"
-                              role="button"
-                              data-bs-toggle="dropdown"
-                              aria-haspopup="true"
-                              aria-expanded="false"
-                            >
-                              <i className="bx bx-dots-horizontal-rounded" />
-                            </a>
-                            <div className="dropdown-menu dropdown-menu-end">
-                              <a
-                                className="dropdown-item d-flex align-items-center justify-content-between"
-                                href="#"
-                              >
-                                Share{' '}
-                                <i className="bx bx-share-alt ms-2 text-muted" />
-                              </a>
-                              <a
-                                className="dropdown-item d-flex align-items-center justify-content-between"
-                                href="#"
-                              >
-                                Bookmark{' '}
-                                <i className="bx bx-bookmarks text-muted ms-2" />
-                              </a>
-                              <div className="dropdown-divider" />
-                              <a
-                                className="dropdown-item d-flex align-items-center justify-content-between"
-                                href="#"
-                              >
-                                Delete{' '}
-                                <i className="bx bx-trash ms-2 text-muted" />
-                              </a>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            {/* end user-profile-desc */}
-          </div>
-          {/* end User profile detail sidebar */}
         </div>
         {/* end user chat content */}
       </div>

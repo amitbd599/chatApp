@@ -206,6 +206,7 @@ File: Main Css File
 .avatar-lg {
   height: 5rem;
   width: 5rem;
+  object-fit: cover;
 }
 
 .avatar-xl {

@@ -59,11 +59,7 @@ const Register = () => {
                           Get your free Vhato account now.
                         </p>
                       </div>
-                      <div
-                        className="needs-validation"
-                        noValidate=""
-                        action="index.html"
-                      >
+                      <div className="needs-validation">
                         <div className="mb-3">
                           <label htmlFor="useremail" className="form-label">
                             Email
