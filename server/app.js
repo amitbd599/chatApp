@@ -18,7 +18,7 @@ const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
     credentials: true,
-    origin: 'http://localhost:3000', // Frontend URL
+    origin: 'https://chat-app-mern-amit.netlify.app', // Frontend URL
     methods: ['GET', 'POST'],
   },
 });
