@@ -14,11 +14,11 @@ import { FaXmark } from 'react-icons/fa6';
 import axios from 'axios';
 import SkeletonLoader from '../helper/SkeletonLoader';
 
-const ENDPOINT = 'http://localhost:5000';
-const BaseURL = 'http://localhost:5000/api/v1';
+// const ENDPOINT = 'http://localhost:5000';
+// const BaseURL = 'http://localhost:5000/api/v1';
 
-// const ENDPOINT = 'https://chat-app-rho-rosy.vercel.app';
-// const BaseURL = 'https://chat-app-rho-rosy.vercel.app/api/v1';
+const ENDPOINT = 'https://7da47a0d-603c-470a-9129-c9b38fc6eb4a-00-2yv2f4l8tiww9.janeway.replit.dev';
+const BaseURL = 'https://7da47a0d-603c-470a-9129-c9b38fc6eb4a-00-2yv2f4l8tiww9.janeway.replit.dev/api/v1';
 
 const Home = () => {
   let [activeUserChatID, setActiveUserChatID] = useState(null);

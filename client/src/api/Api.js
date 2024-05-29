@@ -2,8 +2,8 @@
 import axios from "axios";
 import { ErrorToast, SuccessToast } from "../helper/helper";
 
-const BaseURL = "http://localhost:5000/api/v1";
-// const BaseURL = "https://chat-app-rho-rosy.vercel.app/api/v1";
+// const BaseURL = "http://localhost:5000/api/v1";
+const BaseURL = "https://7da47a0d-603c-470a-9129-c9b38fc6eb4a-00-2yv2f4l8tiww9.janeway.replit.dev/api/v1";
 
 export const reg__Request__API = async (postBody) => {
   let URL = BaseURL + "/register";
