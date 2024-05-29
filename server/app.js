@@ -59,10 +59,10 @@ app.use(mongoSanitize());
 app.use(xss());
 app.use(hpp());
 
-app.use(express.json({ limit: '500mb' }));
-app.use(express.urlencoded({ limit: '50mb' }));
+app.use(express.json());
+app.use(express.urlencoded());
 
-const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30000 });
+const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 300000 });
 app.use(limiter);
 
 app.use('/api/v1', router);
