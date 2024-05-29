@@ -154,6 +154,30 @@ export const Read_user_api = async ()=>{
   }
 }
 
+export const Read_Cobain_api = async (id)=>{
+  const read_sender = await axios.post(
+    `${BaseURL}/read-sender-chat`,
+    { receiverID: id },
+    {
+      withCredentials: true,
+    },
+  );
+  const read_receiver = await axios.post(
+    `${BaseURL}/read-receiver-chat`,
+    { senderID: id },
+    {
+      withCredentials: true,
+    },
+  );
+  let data_1 = read_sender?.data?.data;
+  let data_2 = read_receiver?.data?.data;
+  let combinedData = data_1.concat(data_2);
+  combinedData.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+  return combinedData;
+ 
+}
+
 export const forgot_password__Request__API = async (email) => {
   let URL = BaseURL + `/forgot-password/${email}`;
 

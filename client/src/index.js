@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import "bootstrap/dist/js/bootstrap.bundle.min";
 import "bootstrap/dist/js/bootstrap.bundle.min";
 import 'react-toastify/dist/ReactToastify.min.css';
+import 'react-loading-skeleton/dist/skeleton.css'
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';

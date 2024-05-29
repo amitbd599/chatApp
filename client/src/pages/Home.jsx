@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import socketIOClient from 'socket.io-client';
 import {
+  Read_Cobain_api,
   Read_all_user_api,
   Read_user_api,
   Read_user_by_id_api,
@@ -11,6 +12,7 @@ import { Link } from 'react-router-dom';
 import { ErrorToast, IsEmpty, SuccessToast, getBase64 } from '../helper/helper';
 import { FaXmark } from 'react-icons/fa6';
 import axios from 'axios';
+import SkeletonLoader from '../helper/SkeletonLoader';
 
 const ENDPOINT = 'http://localhost:5000';
 const BaseURL = 'http://localhost:5000/api/v1';
@@ -21,18 +23,35 @@ const Home = () => {
   let [user, setUser] = useState([]);
   let [singleUser, setSingleUser] = useState([]);
   let [singleUserByID, SetSingleUserByID] = useState([]);
-  let [data, setData] = useState([]);
+  let [chatSide, setChatSide] = useState(false);
+  // let [data, setData] = useState([]);
 
   useEffect(() => {
+    setLoading(true);
     Read_all_user_api().then((res) => {
       if (res?.status === true) {
         setUser(res?.data);
+        setLoading(false);
+        Read_Cobain_api(res?.data[0]?._id).then((res_2) => {
+          if (res_2) {
+            setMessages(res_2);
+            setActiveUserChatID(res?.data[0]?._id);
+            setLoading(false);
+          }
+        });
+        Read_user_by_id_api(res?.data[0]?._id).then((res_3) => {
+          if (res_3?.status === true) {
+            SetSingleUserByID(res_3?.data[0]);
+            setLoading(false);
+          }
+        });
       }
     });
     Read_user_api().then((res) => {
       if (res?.status === true) {
         setSingleUser(res?.data[0]);
         setImg(res?.data[0]?.img);
+        setLoading(false);
       }
     });
   }, []);
@@ -43,7 +62,6 @@ const Home = () => {
 
   const sendMessage = async (id) => {
     let senderID = singleUser?._id;
-    console.log(senderID);
     let receiverID = id;
     const newMessage = { senderID, receiverID, message };
     await axios.post(`${BaseURL}/create-chat`, newMessage, {
@@ -51,7 +69,7 @@ const Home = () => {
     });
     const socket = socketIOClient(ENDPOINT);
     socket.emit('chat message', newMessage);
-    setData(newMessage);
+    // setData(newMessage);
     setMessage('');
   };
 
@@ -130,12 +148,12 @@ const Home = () => {
 
       profile_update__Request__API(body).then((result) => {
         if (result === true) {
-          setLoading(false);
           SuccessToast('Profile updated');
           Read_user_api().then((res) => {
             if (res?.status === true) {
               setSingleUser(res?.data[0]);
               setImg(res?.data[0]?.img);
+              setLoading(false);
             }
           });
         }
@@ -146,30 +164,13 @@ const Home = () => {
   let filterUser = user.filter((item) => item?._id !== singleUser?._id);
 
   let getID = async (id) => {
-    const read_sender = await axios.post(
-      `${BaseURL}/read-sender-chat`,
-      { receiverID: id },
-      {
-        withCredentials: true,
-      },
-    );
-    const read_receiver = await axios.post(
-      `${BaseURL}/read-receiver-chat`,
-      { senderID: id },
-      {
-        withCredentials: true,
-      },
-    );
-
-    let data_1 = read_sender?.data?.data;
-    let data_2 = read_receiver?.data?.data;
-    // console.log({ data_1: data_1, data_2: data_2 });
-
-    let combinedData = data_1.concat(data_2);
-    combinedData.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-
-    setMessages(combinedData);
-    setActiveUserChatID(id);
+    setChatSide(true);
+    Read_Cobain_api(id).then((res) => {
+      if (res) {
+        setMessages(res);
+        setActiveUserChatID(id);
+      }
+    });
 
     Read_user_by_id_api(id).then((res) => {
       if (res?.status === true) {
@@ -183,23 +184,46 @@ const Home = () => {
 
     socket.on('chat message', (msg) => {
       msg.receiverID = activeUserChatID;
-      console.log(msg);
-      data.senderID = singleUser?._id;
+      const date = new Date();
+      msg.createdAt = date.toISOString();
+      // data.senderID = singleUser?._id;
       setMessages((messages) => [...messages, msg]);
     });
 
     return () => socket.disconnect();
   }, []);
 
-  console.log(singleUser?._id);
+  const chatEndRef = useRef(null);
 
+  const scrollToBottom = () => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  function convertToBDTime(isoString) {
+    const date = new Date(isoString);
+    const options = {
+      timeZone: 'Asia/Dhaka',
+      hour12: true,
+      hour: 'numeric',
+      minute: 'numeric',
+    };
+    const bdTimeString = date.toLocaleString('en-US', options);
+
+    return bdTimeString;
+  }
   return (
     <div className="layout-wrapper d-lg-flex">
       {/* Start left sidebar-menu */}
       <div className="side-menu flex-lg-column ">
         {/* LOGO */}
         <div className="navbar-brand-box">
-          <a href="index.html" className="logo logo-dark">
+          <Link to="/" className="logo logo-dark">
             <span className="logo-sm">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -211,8 +235,8 @@ const Home = () => {
                 <path d="M7.291 20.824L2 22l1.176-5.291A9.956 9.956 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10a9.956 9.956 0 0 1-4.709-1.176zm.29-2.113l.653.35A7.955 7.955 0 0 0 12 20a8 8 0 1 0-8-8c0 1.334.325 2.618.94 3.766l.349.653-.655 2.947 2.947-.655zM7 12h2a3 3 0 0 0 6 0h2a5 5 0 0 1-10 0z" />
               </svg>
             </span>
-          </a>
-          <a href="index.html" className="logo logo-light">
+          </Link>
+          <Link to="/" className="logo logo-light">
             <span className="logo-sm">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -224,7 +248,7 @@ const Home = () => {
                 <path d="M7.291 20.824L2 22l1.176-5.291A9.956 9.956 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10a9.956 9.956 0 0 1-4.709-1.176zm.29-2.113l.653.35A7.955 7.955 0 0 0 12 20a8 8 0 1 0-8-8c0 1.334.325 2.618.94 3.766l.349.653-.655 2.947 2.947-.655zM7 12h2a3 3 0 0 0 6 0h2a5 5 0 0 1-10 0z" />
               </svg>
             </span>
-          </a>
+          </Link>
         </div>
         {/* end navbar-brand-box */}
         {/* Start side-menu nav */}
@@ -232,7 +256,7 @@ const Home = () => {
           <ul className="nav nav-pills side-menu-nav" role="tablist">
             <li className="nav-item d-none d-lg-block">
               <a
-                className="nav-link"
+                className="nav-link active"
                 id="pills-user-tab"
                 data-bs-toggle="pill"
                 href="#pills-user"
@@ -243,7 +267,7 @@ const Home = () => {
             </li>
             <li className="nav-item">
               <a
-                className="nav-link active"
+                className="nav-link "
                 id="pills-chat-tab"
                 data-bs-toggle="pill"
                 href="#pills-chat"
@@ -275,9 +299,13 @@ const Home = () => {
                 aria-expanded="false"
               >
                 <img
-                  src={singleUser?.img}
-                  alt=""
+                  src={
+                    loading
+                      ? singleUser?.img
+                      : '/assets/images/users/user-dummy-img.jpg'
+                  }
                   className="profile-user rounded-circle"
+                  alt=""
                 />
               </Link>
               <div className="dropdown-menu">
@@ -319,7 +347,7 @@ const Home = () => {
         <div className="tab-content">
           {/* Start Profile tab-pane */}
           <div
-            className="tab-pane"
+            className="tab-pane show active"
             id="pills-user"
             role="tabpanel"
             aria-labelledby="pills-user-tab"
@@ -348,63 +376,88 @@ const Home = () => {
               <div className="text-center border-bottom border-bottom-dashed pt-2 pb-4 mt-n5 position-relative">
                 <div className="mb-lg-3 mb-2">
                   <img
-                    src={singleUser?.img}
+                    src={
+                      loading
+                        ? '/assets/images/users/user-dummy-img.jpg'
+                        : singleUser?.img
+                    }
                     className="rounded-circle avatar-lg img-thumbnail"
                     alt=""
                   />
                 </div>
-                <h5 className="fs-17 mb-1 text-truncate">
-                  {singleUser?.firstName} {singleUser?.lastName}
-                </h5>
-                <p className="text-muted fs-14 text-truncate mb-0">
-                  {singleUser?.email}
-                </p>
-                <p className="text-muted fs-14 text-truncate mb-0">
-                  {singleUser?.mobileNo}
-                </p>
+                {loading === false ? (
+                  <>
+                    <h5 className="fs-17 mb-1 text-truncate">
+                      {singleUser?.firstName} {singleUser?.lastName}
+                    </h5>
+                    <p className="text-muted fs-14 text-truncate mb-0">
+                      {singleUser?.email}
+                    </p>
+                    <p className="text-muted fs-12 text-truncate mb-0">
+                      {singleUser?.mobileNo}
+                    </p>
+                  </>
+                ) : (
+                  <div className="px-4">
+                    <SkeletonLoader item={5} />
+                  </div>
+                )}
               </div>
               {/* End profile user */}
               {/* Start user-profile-desc */}
               <div className="p-4 profile-desc" data-simplebar="">
                 <div className="text-muted">
-                  <p className="mb-3">{singleUser?.bio}</p>
+                  {loading === false ? (
+                    <p className="mb-3">{singleUser?.bio}</p>
+                  ) : (
+                    <div className="px-4">
+                      <SkeletonLoader item={1} />
+                    </div>
+                  )}
                 </div>
                 <div className="border-bottom border-bottom-dashed mb-4 pb-2">
-                  <div className="d-flex py-2 align-items-center">
-                    <div className="flex-shrink-0 me-3">
-                      <i className="bx bx-user align-middle text-muted fs-19" />
+                  {loading === false ? (
+                    <>
+                      <div className="d-flex py-2 align-items-center">
+                        <div className="flex-shrink-0 me-3">
+                          <i className="bx bx-user align-middle text-muted fs-19" />
+                        </div>
+                        <div className="flex-grow-1">
+                          <p className="mb-0">
+                            {singleUser?.firstName} {singleUser?.lastName}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="d-flex py-2 align-items-center">
+                        <div className="flex-shrink-0 me-3">
+                          <i className="ri-phone-line align-middle text-muted fs-19" />
+                        </div>
+                        <div className="flex-grow-1">
+                          <p className="mb-0"> {singleUser?.mobileNo}</p>
+                        </div>
+                      </div>
+                      <div className="d-flex py-2 align-items-center">
+                        <div className="flex-shrink-0 me-3">
+                          <i className="ri-message-2-line align-middle text-muted fs-19" />
+                        </div>
+                        <div className="flex-grow-1">
+                          <p className="fw-medium mb-0"> {singleUser?.email}</p>
+                        </div>
+                      </div>
+                      <div className="d-flex py-2 align-items-center">
+                        <div className="flex-shrink-0 me-3">
+                          <i className="ri-map-pin-2-line align-middle text-muted fs-19" />
+                        </div>
+                        <div className="flex-grow-1">
+                          <p className="mb-0"> {singleUser?.location}</p>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div>
+                      <SkeletonLoader item={10} />
                     </div>
-                    <div className="flex-grow-1">
-                      <p className="mb-0">
-                        {' '}
-                        {singleUser?.firstName} {singleUser?.lastName}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="d-flex py-2 align-items-center">
-                    <div className="flex-shrink-0 me-3">
-                      <i className="ri-phone-line align-middle text-muted fs-19" />
-                    </div>
-                    <div className="flex-grow-1">
-                      <p className="mb-0"> {singleUser?.mobileNo}</p>
-                    </div>
-                  </div>
-                  <div className="d-flex py-2 align-items-center">
-                    <div className="flex-shrink-0 me-3">
-                      <i className="ri-message-2-line align-middle text-muted fs-19" />
-                    </div>
-                    <div className="flex-grow-1">
-                      <p className="fw-medium mb-0"> {singleUser?.email}</p>
-                    </div>
-                  </div>
-                  <div className="d-flex py-2 align-items-center">
-                    <div className="flex-shrink-0 me-3">
-                      <i className="ri-map-pin-2-line align-middle text-muted fs-19" />
-                    </div>
-                    <div className="flex-grow-1">
-                      <p className="mb-0"> {singleUser?.location}</p>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
               {/* end user-profile-desc */}
@@ -414,7 +467,7 @@ const Home = () => {
           {/* End Profile tab-pane */}
           {/* Start chats tab-pane */}
           <div
-            className="tab-pane show active"
+            className="tab-pane "
             id="pills-chat"
             role="tabpanel"
             aria-labelledby="pills-chat-tab"
@@ -435,39 +488,47 @@ const Home = () => {
                   className="list-unstyled chat-list chat-user-list"
                   id="favourite-users"
                 >
-                  {filterUser.map((item, index) => (
-                    <li
-                      id="contact-id-1"
-                      data-name="favorite"
-                      className="mt-2"
-                      key={index}
-                    >
-                      <Link
-                        onClick={() => getID(item?._id)}
-                        to="#"
-                        className="unread-msg-user"
-                      >
-                        <div className="d-flex align-items-center">
-                          <div className="chat-user-img online align-self-center me-2 ms-0">
-                            <img
-                              src={item?.img}
-                              className="rounded-circle avatar-xs"
-                              alt=""
-                            />
-                            <span className="user-status" />
-                          </div>
-                          <div className="overflow-hidden me-2">
-                            <p className="text-truncate chat-username mb-0">
-                              {item?.firstName} {item?.lastName}
-                            </p>
-                            <p className="text-truncate text-muted fs-13 mb-0">
-                              {item?.email}
-                            </p>
-                          </div>
-                        </div>
-                      </Link>
-                    </li>
-                  ))}
+                  {loading === false ? (
+                    <>
+                      {filterUser.map((item, index) => (
+                        <li
+                          id="contact-id-1"
+                          data-name="favorite"
+                          className="mt-2"
+                          key={index}
+                        >
+                          <Link
+                            onClick={() => getID(item?._id)}
+                            to="#"
+                            className="unread-msg-user"
+                          >
+                            <div className="d-flex align-items-center">
+                              <div className="chat-user-img online align-self-center me-2 ms-0">
+                                <img
+                                  src={item?.img}
+                                  className="rounded-circle avatar-xs"
+                                  alt=""
+                                />
+                                <span className="user-status" />
+                              </div>
+                              <div className="overflow-hidden me-2">
+                                <p className="text-truncate chat-username mb-0">
+                                  {item?.firstName} {item?.lastName}
+                                </p>
+                                <p className="text-truncate text-muted fs-13 mb-0">
+                                  {item?.email}
+                                </p>
+                              </div>
+                            </div>
+                          </Link>
+                        </li>
+                      ))}
+                    </>
+                  ) : (
+                    <div className="px-4">
+                      <SkeletonLoader item={38} />
+                    </div>
+                  )}
                 </ul>
               </div>
             </div>
@@ -758,29 +819,34 @@ const Home = () => {
       </div>
       {/* end chat-leftsidebar */}
       {/* Start User chat */}
-      <div className="user-chat w-100 overflow-hidden ">
+      <div
+        className={`user-chat w-100 overflow-hidden ${
+          chatSide && 'user-chat-show'
+        } `}
+      >
         <div className="chat-content d-lg-flex">
           {/* start chat conversation section */}
-          <div className="w-100 overflow-hidden position-relative">
+          <div className="w-100 overflow-hidden position-relative ">
             {/* conversation user */}
-            <div id="users-chat" className="position-relative">
+            <div id="users-chat" className="position-relative ">
               <div className="py-3 user-chat-topbar">
                 <div className="row align-items-center">
                   <div className="col-sm-4 col-8">
                     <div className="d-flex align-items-center">
                       <div className="flex-shrink-0 d-block d-lg-none me-3">
-                        <a
-                          href="javascript: void(0);"
+                        <Link
+                          onClick={() => setChatSide(false)}
+                          to="#"
                           className="btn-primary user-chat-remove fs-18 p-1"
                         >
                           <i className="bx bx-chevron-left align-middle" />
-                        </a>
+                        </Link>
                       </div>
                       <div className="flex-grow-1 overflow-hidden">
                         <div className="d-flex align-items-center">
                           <div className="flex-shrink-0 chat-user-img online user-own-img align-self-center me-3 ms-0">
                             <img
-                              src="assets/images/users/avatar-2.jpg"
+                              src={singleUserByID?.img}
                               className="rounded-circle avatar-sm"
                               alt=""
                             />
@@ -815,15 +881,40 @@ const Home = () => {
                   id="users-conversation"
                 >
                   {messages.map((item, index) => (
-                    // <li key={index}>{item?.message}</li>
-                    <div
+                    <li
                       key={index}
-                      className={`message ${
+                      className={`chat-list ${
                         item?.senderID === singleUser?._id ? 'right' : 'left'
                       }`}
                     >
-                      {item.message}
-                    </div>
+                      <div className="conversation-list">
+                        {item?.senderID !== singleUser?._id && (
+                          <div className="chat-avatar">
+                            <img src={singleUserByID?.img} alt="" />
+                          </div>
+                        )}
+
+                        <div className="user-chat-content">
+                          <div className="ctext-wrap">
+                            <div className="ctext-wrap-content">
+                              <p className="mb-0 ctext-content">
+                                {item.message}
+                              </p>
+                              <div ref={chatEndRef} />
+                            </div>
+                            <div className="align-self-start message-box-drop d-flex"></div>
+                          </div>
+                          <div className="conversation-name">
+                            <small className="text-muted time">
+                              {convertToBDTime(item?.createdAt)}
+                            </small>
+                            <span className="text-success check-message-icon">
+                              <i className="bx bx-check-double" />
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </li>
                   ))}
                 </ul>
               </div>

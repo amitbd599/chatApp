@@ -196,11 +196,13 @@ File: Main Css File
 .avatar-sm {
   height: 2.4rem;
   width: 2.4rem;
+  object-fit: contain;
 }
 
 .avatar-md {
   height: 4rem;
   width: 4rem;
+  object-fit: contain;
 }
 
 .avatar-lg {
@@ -1128,7 +1130,7 @@ a.fg-emoji-picker-close-button {
 .chat-user-img .avatar-xs {
   height: 2.2rem;
   width: 2.2rem;
-  object-fit: cover;
+  object-fit: contain;
 }
 .chat-user-img .user-status {
   width: 10px;
@@ -1376,11 +1378,15 @@ a.fg-emoji-picker-close-button {
   margin-top: 90px;
   padding-top: 10px;
   margin-bottom: 0;
+  height: calc(100vh - 250px);
+  overflow: hidden scroll;
+
 }
 .chat-conversation .chat-conversation-list > li {
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;
+  margin-bottom: 10px;
 }
 .chat-conversation li:last-of-type .conversation-list {
   margin-bottom: 0;
@@ -1406,6 +1412,7 @@ a.fg-emoji-picker-close-button {
   width: 28px;
   height: 28px;
   border-radius: 50%;
+  object-fit: contain;
 }
 .chat-conversation .conversation-list {
   margin-bottom: 24px;
@@ -1450,12 +1457,12 @@ a.fg-emoji-picker-close-button {
 .chat-conversation .conversation-list .ctext-wrap-content::after {
   content: "";
   position: absolute;
-  bottom: 0px;
-  right: -8px;
-  width: 0px;
-  height: 0px;
+  bottom: 0;
+  left: -8px;
+  width: 0;
+  height: 0;
   border: 5px solid var(--bs-tertiary-bg);
-  border-right-color: transparent;
+  border-left-color: transparent;
   border-top-color: transparent;
 }
 .chat-conversation .conversation-list .conversation-name {
@@ -1567,13 +1574,13 @@ a.fg-emoji-picker-close-button {
 .chat-conversation .right .conversation-list .ctext-wrap .ctext-wrap-content::after {
   content: "";
   position: absolute;
-  bottom: 0px;
-  left: -8px;
-  right: auto;
-  width: 0px;
-  height: 0px;
+  bottom: 0;
+  right: -8px;
+  left: auto;
+  width: 0;
+  height: 0;
   border: 5px solid rgba(var(--bs-secondary-rgb), 1);
-  border-left-color: transparent;
+  border-right-color: transparent;
   border-top-color: transparent;
 }
 .chat-conversation .right .conversation-list .ctext-wrap .audio-file-elem {
@@ -1803,7 +1810,7 @@ a.fg-emoji-picker-close-button {
 @-moz-document url-prefix() {
   .user-chat-topbar,
   .chat-input-section {
-    background-color: #f2f2f2 !important;
+    /* background-color: #f2f2f2 !important; */
   }
 }
 .chat-input-typing {
@@ -2263,17 +2270,29 @@ object-fit: contain;
 }
 
 
-
-
-.left {
-  background-color: #f1f1f1;
-  text-align: left;
-  margin-left: auto;
+/* Webkit browsers */
+::-webkit-scrollbar {
+  width: 6px !important;
 }
 
-.right {
-  background-color: #007bff;
-  color: white;
-  text-align: right;
-  margin-right: auto;
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: gray;
+  border-radius: 10px;
+}
+
+/* Firefox */
+.chat-list {
+  scrollbar-width: thin;
+  scrollbar-color: gray #f1f1f1;
+}
+
+.chat-list.right .user-chat-content{
+  padding-right: 15px;
+}
+.chat-list.left .user-chat-content{
+  padding-left: 15px;
 }
