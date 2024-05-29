@@ -62,10 +62,12 @@ app.use(xss());
 app.use(hpp());
 
 app.use(express.json());
-app.use(express.urlencoded());
+app.use(express.urlencoded({ extended: true }));
 
-const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 300000 });
+
+const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 1000 });
 app.use(limiter);
+
 
 app.use('/api/v1', router);
 
