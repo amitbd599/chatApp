@@ -14,12 +14,19 @@ const mongoose = require('mongoose');
 const dotENV = require('dotenv');
 dotENV.config();
 
-const server = http.createServer(app);
-const io = socketIo(server, {
-  cors: {
+app.use(
+  cors({
     credentials: true,
-    origin: 'https://chat-app-mern-amit.netlify.app', // Frontend URL
+    origin: process.env.Origin_HOST,
+  }),
+);
+
+const server = require('http').createServer(app);
+const io = require('socket.io')(server, {
+  cors: {
+    origin: 'http://localhost:3000',
     methods: ['GET', 'POST'],
+    credentials: true,
   },
 });
 
@@ -48,12 +55,7 @@ mongoose
   });
 
 app.use(cookieParser());
-app.use(
-  cors({
-    credentials: true,
-    origin: process.env.Origin_HOST,
-  }),
-);
+
 app.use(helmet());
 app.use(mongoSanitize());
 app.use(xss());
