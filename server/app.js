@@ -35,11 +35,11 @@ io.on('connection', (socket) => {
   });
 });
 
-// let URL =
-//   "mongodb+srv://<username>:<password>@cluster0.fsp0qs4.mongodb.net/e-commerce?retryWrites=true&w=majority";
-// let option = { user: "admin", pass: "admin@123", autoIndex: true };
+let URL =
+  'mongodb+srv://<username>:<password>@cluster0.fsp0qs4.mongodb.net/e-commerce?retryWrites=true&w=majority';
+let option = { user: 'admin', pass: 'admin@123', autoIndex: true };
 mongoose
-  .connect('mongodb://localhost:27017/chatApp')
+  .connect(URL, option)
   .then((res) => {
     console.log('Database Connected');
   })
