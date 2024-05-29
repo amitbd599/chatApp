@@ -17,7 +17,7 @@ dotENV.config();
 app.use(
   cors({
     credentials: true,
-    origin: "*",
+    origin: "https://chat-app-mern-amit.netlify.app",
   }),
 );
 
