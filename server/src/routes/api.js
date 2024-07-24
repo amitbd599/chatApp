@@ -14,7 +14,7 @@ router.post('/user-update', AuthVerification, UserController.UserUpdate);
 router.post('/forgot-password/:email', UserController.RecoverVerifyEmailUser);
 router.post('/otp-verify/:email/:otp', UserController.RecoverVerifyOTPUser);
 router.post('/reset-password/:email/:otp', UserController.ResetPasswordUser);
-
+router.get("/verify", AuthVerification, UserController.EmailVerifyData);
 // Chat routes
 router.post('/create-chat', AuthVerification, ChatController.CreateChat);
 router.post(
@@ -27,5 +27,7 @@ router.post(
   AuthVerification,
   ChatController.ReadReceiverChat,
 );
+
+
 
 module.exports = router;

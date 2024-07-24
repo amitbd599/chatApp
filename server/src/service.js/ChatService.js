@@ -42,7 +42,6 @@ const ReadReceiverChatService = async (req) => {
       },
     };
 
-    console.log(MatchStage);
     let data = await ChatModel.aggregate([MatchStage]);
     return { status: true, data: data };
   } catch (error) {

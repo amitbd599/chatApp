@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
 import OTPCode from './pages/OTPCode';
 import ChangePassword from './pages/ChangePassword';
+import PrivateRoute from './components/PrivateRoute';
 
 function App() {
 
@@ -13,7 +14,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route exact path="/" element={<Home />} />
+        <Route exact path="/" element={<PrivateRoute><Home /></PrivateRoute> } />
         <Route exact path="/register" element={<Register />} />
         <Route exact path="/login" element={<Login />} />
         <Route exact path="/forgot-password" element={<ForgotPassword />} />

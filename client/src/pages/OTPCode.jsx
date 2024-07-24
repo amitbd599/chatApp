@@ -3,6 +3,7 @@ import { ErrorToast, IsEmpty } from '../helper/helper';
 import { otp__Request__API } from '../api/Api';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import ReactCodeInput from 'react-code-input';
+import Loader from '../components/Loader';
 const OTPCode = () => {
   const navigate = useNavigate();
   const { email } = useParams();
@@ -28,6 +29,9 @@ const OTPCode = () => {
   };
   return (
     <div className="auth-bg">
+       <div className={`loading ${loading && "active"}`}>
+        <Loader />
+      </div>
       <div className="container p-0">
         <div className="row justify-content-center g-0">
           <div className="col-xl-9 col-lg-8">
@@ -84,10 +88,9 @@ const OTPCode = () => {
                 <div className="row">
                   <div className="col-xl-12">
                     <div className="text-center text-muted p-4">
-                      <p className="mb-0">
-                        © Vhato. Crafted with{' '}
-                        <i className="mdi mdi-heart text-danger" /> by
-                        Themesbrand
+                    <p className="mb-0">
+                        © Created by
+                        <i className="mdi mdi-heart text-danger" /> by Amit
                       </p>
                     </div>
                   </div>

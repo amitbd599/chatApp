@@ -1,7 +1,6 @@
 const express = require('express');
 const router = require('./src/routes/api');
 const app = new express();
-const socketIo = require('socket.io');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const mongoSanitize = require('express-mongo-sanitize');
@@ -17,7 +16,7 @@ dotENV.config();
 app.use(
   cors({
     credentials: true,
-    origin: "https://chat-app-mern-amit.netlify.app",
+    origin: process.env.Origin_HOST,
   }),
 );
 
@@ -28,6 +27,12 @@ const io = require('socket.io')(server, {
     methods: ['GET', 'POST'],
     credentials: true,
   },
+});
+
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', process.env.Origin_HOST); // Replace with your Netlify URL
+  res.header('Access-Control-Allow-Credentials', 'true');
+  next();
 });
 
 io.on('connection', (socket) => {
@@ -43,8 +48,12 @@ io.on('connection', (socket) => {
 });
 
 let URL =
-  'mongodb+srv://<username>:<password>@cluster0.fsp0qs4.mongodb.net/e-commerce?retryWrites=true&w=majority';
-let option = { user: 'admin', pass: 'admin@123', autoIndex: true };
+  'mongodb+srv://<username>:<password>@cluster0.fsp0qs4.mongodb.net/chat_app?retryWrites=true&w=majority';
+let option = {
+  user: process.env.DB_USER,
+  pass: process.env.DB_PASS,
+  autoIndex: true,
+};
 mongoose
   .connect(URL, option)
   .then((res) => {
@@ -64,10 +73,8 @@ app.use(hpp());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 1000 });
 app.use(limiter);
-
 
 app.use('/api/v1', router);
 

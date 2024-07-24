@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ErrorToast, IsEmpty } from '../helper/helper';
 import { login__Request__API } from '../api/Api';
+import Loader from '../components/Loader';
 
 const Login = () => {
   let [loading, setLoading] = useState(false);
@@ -24,7 +25,7 @@ const Login = () => {
       login__Request__API({ email, password }).then((result) => {
         if (result === true) {
           setLoading(false);
-          navigate('/');
+          window.location.href = '/';
         } else {
           setLoading(false);
         }
@@ -33,6 +34,9 @@ const Login = () => {
   };
   return (
     <div className="auth-bg">
+      <div className={`loading ${loading && 'active'}`}>
+        <Loader />
+      </div>
       <div className="container p-0">
         <div className="row justify-content-center g-0">
           <div className="col-xl-9 col-lg-8">
@@ -117,10 +121,9 @@ const Login = () => {
                 <div className="row">
                   <div className="col-xl-12">
                     <div className="text-center text-muted p-4">
-                      <p className="mb-0">
-                        © Vhato. Crafted with{' '}
-                        <i className="mdi mdi-heart text-danger" /> by
-                        Themesbrand
+                    <p className="mb-0">
+                        © Created by
+                        <i className="mdi mdi-heart text-danger" /> by Amit
                       </p>
                     </div>
                   </div>

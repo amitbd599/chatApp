@@ -5,9 +5,9 @@ const SkeletonLoader = ({ item }) => {
     <SkeletonTheme
       baseColor="#ebebeb"
       highlightColor="#f5f5f5"
-      className="w-100vw"
+      className="w-100"
     >
-      <div className="">
+      <div className="w-100 px-3">
         <Skeleton count={item} />
       </div>
     </SkeletonTheme>

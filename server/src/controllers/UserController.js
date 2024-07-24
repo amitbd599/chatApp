@@ -9,6 +9,7 @@ const {
   ResetPasswordUserService,
   UserAllReadService,
   UserReadByIDService,
+  EmailVerifyDataService,
 } = require('../service.js/UserService');
 
 //! User Control
@@ -50,5 +51,10 @@ exports.RecoverVerifyOTPUser = async (req, res) => {
 };
 exports.ResetPasswordUser = async (req, res) => {
   let result = await ResetPasswordUserService(req);
+  return res.status(200).json(result);
+};
+
+exports.EmailVerifyData = async (req, res) => {
+  let result = await EmailVerifyDataService();
   return res.status(200).json(result);
 };

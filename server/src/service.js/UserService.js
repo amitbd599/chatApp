@@ -26,11 +26,11 @@ const LoginUserService = async (req, res) => {
     ]);
 
     if (data.length > 0) {
-      let token = EncodeToken(data[0]);
+      let token = EncodeToken(data[0]); 
 
       let options = {
         maxAge: process.env.Cookie_Expire_Time,
-        httpOnly: true,
+        httpOnly: false,
         sameSite: 'none',
         secure: true,
       };
@@ -145,8 +145,6 @@ const RecoverVerifyEmailUserService = async (req) => {
       { $count: 'total' },
     ]);
 
-    console.log(UserCount.length);
-
     if (UserCount.length > 0) {
       //Create OTP
       let CreateOTP = await OTPModel.updateOne(
@@ -216,7 +214,6 @@ const ResetPasswordUserService = async (req) => {
       { $match: { email, otp, status: 1 } },
     ]);
 
-    console.log(OTPUsedCount.length);
     if (OTPUsedCount.length > 0) {
       let PassUpdate = await UserModel.updateOne(
         { email: email },
@@ -240,6 +237,14 @@ const ResetPasswordUserService = async (req) => {
   }
 };
 
+const EmailVerifyDataService = async () => {
+  try {
+    return { status: true };
+  } catch (e) {
+    return { status: false, error: error.toString() };
+  }
+};
+
 module.exports = {
   RegisterUserService,
   LoginUserService,
@@ -251,4 +256,5 @@ module.exports = {
   ResetPasswordUserService,
   UserAllReadService,
   UserReadByIDService,
+  EmailVerifyDataService,
 };
